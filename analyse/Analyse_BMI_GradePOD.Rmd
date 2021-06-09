@@ -1,0 +1,70 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle: "BMI en grades POD"
+author: "Wesley Maebe"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Creer BMI classificatie tabel
+```{r}
+BMIclass <- data.frame(
+  Min = c(0, 18.5, 25, 30),
+  Max = c(18.5, 25, 30, 50),
+  Classificatie = c("Ondergewicht", "Gezond gewicht", "Overgewicht", "Overgewicht")
+)
+```
+
+Uitlezen data: maken een summary table voor tabellen TestQ, wegwerken van NA's
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+allTestData  <-  na.omit(subset(data, select = c(11,12, 113))) %>%
+  mutate(BMI = WeightKg/((LengthCm/100)^2))
+workData <- transform(allTestData, BMIClassificatie=BMIclass$Classificatie[findInterval(BMI,BMIclass$Min)])
+glimpse(workData)
+```
+
+
+## Regressie-analyse `GradeMath4IT` vs `BMI`
+Is er een verband tussen de BMI classificatie (`BMIClassificatie`) en het examencijfer voor Math4IT (`GradesPOD`)
+
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`BMIClassificatie`) wordt afgebeeld op de X-as, de afhankelijke (`GradesPOD`) op de Y-as:
+
+
+
+```{r}
+ggplot(data = workData, mapping = aes(x = BMI, y = GradePOD1)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+Visueel is er niet direct een lineair verband waar te nemen.
+
+### Regressie analyse
+
+```{r}
+#                                       afh                           onafh
+regr_BMI_GradeMath4IT <- lm(workData$GradePOD1 ~ workData$BMI)
+regr_BMI_GradeMath4IT
+```
+De getrokken rechte heeft een licht dalende hoek met een snijding van de Y-as op iets minder dan 12.9
+
+### Correlatie en determinatie
+
+```{r}
+correlatieCoefficient <- cor(x = workData$BMI, y = workData$GradePOD1)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+
+Zoals verwacht is het verband met de huidige waarden verwaarloosbaar. R = 0.026 (absolute cijfers) onder 0.3 en R² 0.0007 onder 0.1
+ 
+
+
+

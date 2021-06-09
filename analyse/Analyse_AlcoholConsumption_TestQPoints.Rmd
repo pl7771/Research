@@ -1,0 +1,54 @@
+---
+title: "Alcohol consumption and Score op de vragen op de wiskundetoets"
+author: "Ilya Mikhaylov"
+date: "4/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Uitlezen data: maken een summary table voor tabellen TestQ, wegwerken van NA's
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+allTestData  <-  na.omit(subset(data, select = c(16, 96:110))) %>%
+  mutate(TestLevel1 = TestQ01 + TestQ02 + TestQ03 + TestQ04 + TestQ05) %>%
+  mutate(TestLevel2 = TestQ06 + TestQ07 + TestQ08 + TestQ09 + TestQ10) %>%
+  mutate(TestLevel3 = TestQ11 + TestQ12 + TestQ13 + TestQ14 + TestQ15) %>%
+  mutate(TestTotal = TestLevel1 + TestLevel2 + TestLevel3)
+glimpse(allTestData)
+```
+
+
+## Regressie-analyse `Sum van wiskundige testen` vs `AlcoholConsumption`
+Is er een verband tussen aantal standaardglazen alcohol (`AlcoholConsumption`) en algemene wiskundige test (`TestTotal`)
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`AlcoholConsumption`) wordt afgebeeld op de X-as, de afhankelijke (`Sum van wiskundige testen`) op de Y-as. We tekenen ook de regressierechte:
+
+```{r}
+ggplot(data = allTestData, mapping = aes(x = AlcoholConsumption, y = TestTotal)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+### Regressie analyse
+
+```{r}
+#                                       afh                           onafh
+regr_alcohol_wisktest <- lm(allTestData$TestTotal ~ allTestData$AlcoholConsumption)
+regr_alcohol_wisktest
+```
+
+### Correlatie en determinatie
+
+```{r}
+correlatieCoefficient <- cor(x = allTestData$AlcoholConsumption, y = allTestData$TestTotal)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+
+De correlatiecoëfficiënt is hier -0.054, duidend op een zeer zwak en dalend verband. Ongeveer 0.2% van de variantie in de observaties wordt verklaard door de regressierechte.

@@ -1,0 +1,82 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle: "Analyse alcohol consumptie en gradesPOD"
+author: "Wesley Maebe"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+Uitlezen data en maken van een mini dataframe en verwijderen NA waarden voor regressie analyse
+
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+usedData <- na.omit(data.frame(AlcoholConsumptions=data$AlcoholConsumption,
+                       GradesPOD=data$GradePOD1,
+                       Gender=data$Gender))
+glimpse(usedData)
+```
+
+## Regressie-analyse niet opgesplitst in geslacht `AlcoholConsumption` vs `GradePOD`
+
+Is er een verband tussen aantal standaardglazen alcohol (`AlcoholConsumption`) en het examencijfer voor POD, probleem oplossend denken (`GradePOD1`)
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`AlcoholConsumption`) wordt afgebeeld op de X-as, de afhankelijke (`GradePOD1`) op de Y-as. We tekenen ook de regressierechte:
+
+```{r}
+ggplot(data = data, mapping = aes(x = AlcoholConsumption, y = GradePOD1, col = Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+Visiueel is er een stijgende rechte te zien. Dit zou willen zeggen dat bij een stijging in gebruik van alcohol, de cijfers ook stijgen. De uitschieters bepalen hierbij echter sterk de hoek van de helling. De punten liggen in het algemeen naar ons aanvoelen eerder ver van de getrokken rechte
+
+### Regressie analyse
+
+```{r}
+regr_alcoholmath <- lm(usedData$GradesPOD ~ usedData$AlcoholConsumptions)
+regr_alcoholmath
+```
+Het snijpunt met de yAs ligt op ongeveer 12.4 met een beperkte hellingsgraad van 0.011
+
+### Correlatie en determinatie
+
+```{r}
+correlatieCoefficient <- cor(x = usedData$AlcoholConsumptions, y = usedData$GradesPOD)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+Zoals verwacht is het verband met de huidige waarden verwaarloosbaar. R onder 0.3 en R² onder 0.1. 
+
+## Mannelijk
+
+```{r}
+mannelijk <- usedData[usedData$Gender == "Mannelijk",]
+regr_mannelijk <- lm(mannelijk$GradesPOD ~ mannelijk$AlcoholConsumptions)
+regr_mannelijk
+correlatieCoefficient_mannen <- cor(x = mannelijk$GradesPOD, y = mannelijk$AlcoholConsumptions)
+determinatieCoefficient_mannen <- cor(x = mannelijk$GradesPOD, y = mannelijk$AlcoholConsumptions)^2
+correlatieCoefficient_mannen 
+determinatieCoefficient_mannen
+```
+Omdat een groot deel van de deelnemers mannelijk is verwachten we een gelijkaardige conclusie als bij het totaal.  Dat blijkt inderdaad het geval. Het verband met de huidige waarden is verwaarloosbaar. R onder 0.3 en R² onder 0.1. 
+
+
+## Vrouwelijk
+
+```{r}
+vrouwelijk <- usedData[usedData$Gender == "Vrouwelijk",]
+regr_vrouwelijk <- lm(vrouwelijk$GradesPOD ~ vrouwelijk$AlcoholConsumptions)
+regr_vrouwelijk
+correlatieCoefficient_vrouwen <- cor(x = vrouwelijk$GradesPOD, y = vrouwelijk$AlcoholConsumptions)
+determinatieCoefficient_vrouwen <- cor(x = vrouwelijk$GradesPOD, y = vrouwelijk$AlcoholConsumptions)^2
+correlatieCoefficient_vrouwen 
+determinatieCoefficient_vrouwen
+```
+Bij de beperkte vrouwlijke deelnemers aan het onderzoek is een sterkere stijging waar genomen van de getrokken rechte. Hoewel de punten hier in het algemeen een sterk verband vertonen, blijven ze toch nog onder R 0.3 en R² 0.1. Er is met andere woorden ook geen wezenlijk verband naar boven gekomen.
+
+

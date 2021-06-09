@@ -1,0 +1,79 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle: "BMI en Score op de vragen op de wiskundetoets"
+author: "Schoeters Benjamin"
+date: "5/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Creer BMI classificatie tabel
+```{r}
+BMIClass <- data.frame(
+                Min = c(0, 18.5, 25, 30),
+                Max = c(18.5, 25, 30, 50),
+                Classificatie = c("Ondergewicht", "Gezond gewicht", "Overgewicht", "Obesitas")
+                 )
+```
+
+Uitlezen data: maken een summary table voor tabellen TestQ, wegwerken van NA's
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+allTestData  <-  na.omit(subset(data, select = c(11:12, 96:110))) %>%
+  mutate(BMI = WeightKg/((LengthCm/100)^2)) %>%
+  mutate(TestLevel1 = TestQ01 + TestQ02 + TestQ03 + TestQ04 + TestQ05) %>%
+  mutate(TestLevel2 = TestQ06 + TestQ07 + TestQ08 + TestQ09 + TestQ10) %>%
+  mutate(TestLevel3 = TestQ11 + TestQ12 + TestQ13 + TestQ14 + TestQ15) %>%
+  mutate(TestTotal = TestLevel1 + TestLevel2 + TestLevel3)
+allTestData <- allTestData[allTestData$TestTotal<=15,]
+workData <- transform(allTestData, BMIClassificatie=BMIClass$Classificatie[findInterval(BMI ,BMIClass$Min)])
+glimpse(workData)
+```
+
+
+## Regressie-analyse `Avg van wiskundige testen` vs `BMI`
+Is er een verband tussen de BMI (`BMI`) en algemene wiskundige test (`TestTotal`)
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`BMIClassificatie`) wordt afgebeeld op de X-as, de afhankelijke (`Avg van wiskundige testen`) op de Y-as:
+
+```{r}
+par(mfrow=c(3,1))
+ggplot(workData, aes(x = factor(BMIClassificatie), y = TestLevel1)) + 
+  stat_summary(fun = "mean", geom = "bar")
+ggplot(workData, aes(x = factor(BMIClassificatie), y = TestLevel2)) + 
+  stat_summary(fun = "mean", geom = "bar")
+ggplot(workData, aes(x = factor(BMIClassificatie), y = TestLevel3)) + 
+  stat_summary(fun = "mean", geom = "bar")
+```
+
+```{r}
+ggplot(data = workData, mapping = aes(x = BMI, y = TestTotal)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+
+### Regressie analyse
+
+```{r}
+#                                       afh                           onafh
+regr_BMI_TestLevel3 <- lm(workData$TestTotal ~ workData$BMI)
+regr_BMI_TestLevel3
+```
+
+### Correlatie en determinatie
+
+```{r}
+correlatieCoefficient <- cor(x = workData$BMI, y = workData$TestTotal)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+
+
+De correlatiecoëfficiënt is hier -0.057, wat duidend op een zeer zwak en dalend verband. Ongeveer 0.2% van de variantie in de observaties wordt verklaard door de regressierechte.

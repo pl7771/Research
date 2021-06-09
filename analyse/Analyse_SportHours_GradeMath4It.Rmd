@@ -1,0 +1,80 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle:  "Uren sport en Math4It"
+author: "Wesley Maebe"
+date: "5/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+Uitlezen data: maken een summary table voor tabellen TestQ, wegwerken van NA's
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+usedData <- na.omit(data.frame(SportHours=data$SportHours,
+                       GradeMath4IT=data$GradeMath4IT,
+                       Gender=data$Gender))
+glimpse(usedData)
+```
+
+
+## Regressie-analyse `Avg van wiskundige testen` vs `SportHours`
+Is er een verband tussen de aantal uren sport gedurende de week (`SportHours`) en examenscores Math4IT (`GradeMath4IT`)
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`UrenSportGroup`) wordt afgebeeld op de X-as, de afhankelijke (`GradeMath4IT`) op de Y-as:
+
+```{r}
+ggplot(data = usedData, mapping = aes(x = SportHours, y = GradeMath4IT, col = Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+### Regressie analyse
+
+```{r}
+regr_alcoholmath <- lm(usedData$GradeMath4IT ~ usedData$SportHours)
+regr_alcoholmath
+```
+Het snijpunt met de yAs ligt op ongeveer 11.90 met een beperkte hellingsgraad van 0.048
+
+### Correlatie en determinatie
+
+```{r}
+correlatieCoefficient <- cor(x = usedData$SportHours, y = usedData$GradeMath4IT)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+Zoals verwacht is het verband met de huidige waarden verwaarloosbaar. R onder 0.3 en R² onder 0.1. 
+
+## Mannelijk
+
+```{r}
+mannelijk <- usedData[usedData$Gender == "Mannelijk",]
+regr_mannelijk <- lm(mannelijk$GradeMath4IT ~ mannelijk$SportHours)
+regr_mannelijk
+correlatieCoefficient_mannen <- cor(x = mannelijk$GradeMath4IT, y = mannelijk$SportHours)
+determinatieCoefficient_mannen <- cor(x = mannelijk$GradeMath4IT, y = mannelijk$SportHours)^2
+correlatieCoefficient_mannen 
+determinatieCoefficient_mannen
+```
+Omdat een groot deel van de deelnemers mannelijk is verwachten we een gelijkaardige conclusie als bij het totaal.  Dat blijkt inderdaad het geval. Het verband met de huidige waarden is verwaarloosbaar. R onder 0.3 en R² onder 0.1. 
+
+
+## Vrouwelijk
+
+```{r}
+vrouwelijk <- usedData[usedData$Gender == "Vrouwelijk",]
+regr_vrouwelijk <- lm(vrouwelijk$GradeMath4IT ~ vrouwelijk$SportHours)
+regr_vrouwelijk
+correlatieCoefficient_vrouwen <- cor(x = vrouwelijk$GradeMath4IT, y = vrouwelijk$SportHours)
+determinatieCoefficient_vrouwen <- cor(x = vrouwelijk$GradeMath4IT, y = vrouwelijk$SportHours)^2
+correlatieCoefficient_vrouwen 
+determinatieCoefficient_vrouwen
+```
+Bij de beperkte vrouwlijke deelnemers aan het onderzoek is een sterkere stijging waar genomen van de getrokken rechte. Hoewel de punten hier in het algemeen een sterk verband vertonen, blijven ze toch nog onder R 0.3 en R² 0.1. Er is met andere woorden ook geen wezenlijk verband naar boven gekomen.
+

@@ -1,0 +1,129 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle: "cigaretten en MAth4IT"
+author: "Wesley Maebe"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Creer sigaretten classificatie tabel
+
+```{r}
+Rokerclass <- data.frame(
+  Min = c(0, 1),
+  Max = c(0, 1000),
+  Classificatie = c("geen roker", "roker")
+)
+```
+
+Uitlezen data
+
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+usedData <- na.omit(data.frame(CigaretteConsumption=data$CigaretteConsumption,
+                       GradesMath4IT=data$GradeMath4IT))
+workData <- transform(usedData, CigaretteConsumptionClassificatie=Rokerclass$Classificatie[findInterval(CigaretteConsumption,Rokerclass$Min)])
+glimpse(workData)
+```
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`CigaretteConsumption`) wordt afgebeeld op de X-as, de afhankelijke (`GradeMath4IT`) op de Y-as. We tekenen ook de regressierechte:
+
+```{r}
+ggplot(data = usedData, mapping = aes(x = CigaretteConsumption, y = GradesMath4IT)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+Op basis van de grafische voorstelling is het duidelijk dat de verdeling helemaal geen rechte is. Immers uitschieters in het rookgedrag hebben een grote invloed op de helling van de rechte. Veel van de deelnemers zijn niet rokers. We maken dus beter een verdeling rokers versus niet-rokers
+
+### gemiddelden bekijken
+
+```{r}
+mx <- mean(usedData$CigaretteConsumption)
+my <- mean(usedData$GradesMath4IT)
+mx
+my
+```
+We kijken naar de gemiddelde als alternatief van de rechte. mean y blijkt ongeveer 12.
+
+### regressie
+
+```{r}
+#                                       afh                           onafh
+regr_Cigarette_GradeMath4IT <- lm(workData$GradesMath4IT ~workData$CigaretteConsumption)
+regr_Cigarette_GradeMath4IT
+```
+Intersect ligt ook ter hoogte van het gemiddelde van 12. Dat is dus wel oké.
+
+### correlatie
+
+```{r}
+correlatieCoefficient <- cor(x = workData$CigaretteConsumption, y = workData$GradesMath4IT)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+
+Zoals verwacht is het verband met de huidige waarden verwaarloosbaar. R onder 0.3 en R² onder 0.1
+Met andere woorden de punten liggen heel ver van de getekende rechte. Dat komt overeen met de visuele indruk.
+
+Wat als we gewoon een onderscheid maken tussen Roker en Geen roker.
+De onafhankelijke wordt dan kwalitatieve waarde
+De afhankelijke blijft de waarden van de behaalde cijfers dus kwantitatief
+
+### visualisatie kwalitatief
+
+```{r}
+strategy_A <- workData$GradesMath4IT[workData$CigaretteConsumptionClassificatie == 'geen roker']
+strategy_B <- workData$GradesMath4IT[workData$CigaretteConsumptionClassificatie == 'roker']
+```
+
+```{r}
+sum (workData$CigaretteConsumptionClassificatie == 'geen roker')
+sum (workData$CigaretteConsumptionClassificatie == 'roker')
+```
+
+```{r}
+# Boxplot
+boxplot(workData$GradesMath4IT ~ workData$CigaretteConsumptionClassificatie, horizontal = TRUE, xlab = "Grades Math4IT", ylab = "Cigarette Consumption")
+
+# Clustered bar chart (histogram)
+frequencies <- table(workData$GradesMath4IT, workData$CigaretteConsumptionClassificatie)
+barplot(t(frequencies), beside = TRUE, legend = TRUE, xlab = "Grades Math4IT", ylab = "Cigarette Comsumption")
+```
+Op basis van de visualisaties lijkt de bulk van de rokers en niet rokers binnen hetzelfde segment te vallen van de behaalde scores. Maw er lijkt op het zicht geen wezenlijk verschil.
+
+H0 = geen verschil H1 = scores rokers > niet rokers
+
+```{r}
+t.test(strategy_B, strategy_A, alternative = 'greater', conf.level = 1 - 0.05)
+```
+P is groter dan 0.05 - nulhypothese niet verwerpen. Er Is geen verband.
+
+```{r}
+# Pooled standard deviation for two samples x and y
+pooled_sd <- function(x, y) {
+  sd_x <- sd(x, na.rm = TRUE)
+  sd_y <- sd(y, na.rm = TRUE)
+  n_x <- length(x)
+  n_y <- length(y)
+  
+  sqrt( ((n_x - 1) * sd_x^2 + (n_y - 1) * sd_y^2)
+        / (n_x + n_y - 2))
+}
+
+# Effect size, Cohen's d
+cohens_d <- function(x, y) {
+  (mean(y, na.rm = TRUE) - mean(x, na.rm = TRUE)) / pooled_sd(x, y)
+}
+```
+
+```{r}
+cohens_d(strategy_A, strategy_B)
+```
+Quod demostrandum.Een klein verschil/effect gevonden wel onder de 0.4
+

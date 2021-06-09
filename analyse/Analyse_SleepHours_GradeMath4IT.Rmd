@@ -1,0 +1,83 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle: "Analyse slaap uren en grades Math4IT"
+author: "Ilya Mikhaylov"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Uitlezen data en maken van een mini dataframe en verwijderen NA waarden voor regressie analyse
+
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+usedData <- data.frame(SleepHours=data$SleepHours,
+                       GradesMath4IT=data$GradeMath4IT,
+                       Gender=data$Gender)
+usedDataWithoutNA <- na.omit(usedData)
+glimpse(usedDataWithoutNA)
+```
+
+
+
+## Regressie-analyse niet opgesplitst in geslacht `SleepHours` vs `GradeMath4IT`
+
+Is er een verband tussen aantal slaap uren (`SleepHours`) en de examencijfer voor Math4IT (`GradeMath4IT`)
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`SleepHours`) wordt afgebeeld op de X-as, de afhankelijke (`GradeMath4IT`) op de Y-as. We tekenen ook de regressierechte:
+
+```{r}
+ggplot(data = data, mapping = aes(x = SleepHours, y = GradeMath4IT, col = Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+### Regressie analyse
+
+```{r}
+#                                       afh                           onafh
+regr_alcoholmath <- lm(usedDataWithoutNA$GradesMath4IT ~ usedDataWithoutNA$SleepHours)
+regr_alcoholmath
+```
+
+### Correlatie en determinatie
+
+```{r}
+correlatieCoefficient <- cor(x = usedDataWithoutNA$SleepHours, y = usedDataWithoutNA$GradesMath4IT)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+
+De correlatiecoëfficiënt is hier -0.055, duidend op een zeer zwak en dalend verband. Ongeveer 0.2% van de variantie in de observaties wordt verklaard door de regressierechte.
+
+## Mannelijk
+
+```{r}
+mannelijk <- usedDataWithoutNA[usedDataWithoutNA$Gender == "Mannelijk",]
+regr_mannelijk <- lm(mannelijk$GradesMath4IT ~ mannelijk$SleepHours)
+regr_mannelijk
+correlatieCoefficient_mannen <- cor(x = mannelijk$GradesMath4IT, y = mannelijk$SleepHours)
+determinatieCoefficient_mannen <- cor(x = mannelijk$GradesMath4IT, y = mannelijk$SleepHours)^2
+correlatieCoefficient_mannen 
+determinatieCoefficient_mannen
+```
+De correlatiecoëfficiënt is hier -0.044, duidend op een zeer zwak en dalend verband. Ongeveer 0.2% van de variantie in de observaties wordt verklaard door de regressierechte.
+
+
+## Vrouwelijk
+
+```{r}
+vrouwelijk <- usedDataWithoutNA[usedDataWithoutNA$Gender == "Vrouwelijk",]
+regr_vrouwelijk <- lm(vrouwelijk$GradesMath4IT ~ vrouwelijk$SleepHours)
+regr_vrouwelijk
+correlatieCoefficient_vrouwen <- cor(x = vrouwelijk$GradesMath4IT, y = vrouwelijk$SleepHours)
+determinatieCoefficient_vrouwen <- cor(x = vrouwelijk$GradesMath4IT, y = vrouwelijk$SleepHours)^2
+correlatieCoefficient_vrouwen 
+determinatieCoefficient_vrouwen
+```
+De correlatiecoëfficiënt is hier -0.078, duidend op een zeer zwak en dalend verband. Ongeveer 0.5% van de variantie in de observaties wordt verklaard door de regressierechte. Echter zijn er weinig observaties van vrouwelijk geslacht waardoor er niet duidelijk patroon te zien is. Op basis van bovenstaande dataset kunnen we niet zeggen dat de conclusie uit de analyse voor vrouwen correct is.

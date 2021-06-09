@@ -1,0 +1,130 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle: "cigaretten en TestQPoint"
+author: "Wesley Maebe"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Creer sigaretten classificatie tabel
+
+```{r}
+Rokerclass <- data.frame(
+  Min = c(0, 1),
+  Max = c(0, 1000),
+  Classificatie = c("geen roker", "roker")
+)
+```
+
+Uitlezen data
+
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+usedData  <-  na.omit(subset(data, select = c(17,96:110))) %>%
+  mutate(TestLevel1 = TestQ01 + TestQ02 + TestQ03 + TestQ04 + TestQ05) %>%
+  mutate(TestLevel2 = TestQ06 + TestQ07 + TestQ08 + TestQ09 + TestQ10) %>%
+  mutate(TestLevel3 = TestQ11 + TestQ12 + TestQ13 + TestQ14 + TestQ15) %>%
+  mutate(TestTotal = TestLevel1 + TestLevel2 + TestLevel3)
+
+workData <- transform(usedData, CigaretteConsumptionClassificatie=Rokerclass$Classificatie[findInterval(CigaretteConsumption,Rokerclass$Min)])
+glimpse(workData)
+```
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`CigaretteConsumption`) wordt afgebeeld op de X-as, de afhankelijke (`TestTotal`) op de Y-as. We tekenen ook de regressierechte:
+
+```{r}
+ggplot(data = usedData, mapping = aes(x = CigaretteConsumption, y = TestTotal)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+Op basis van de grafische voorstelling is het duidelijk dat de verdeling helemaal geen rechte is. De uitschieter aan de rechter kant heeft een grote inpakt op de helling van de rechte. Veel van de deelnemers zijn niet rokers. We maken dus beter een verdeling rokers versus niet-rokers
+
+### gemiddelden bekijken
+
+```{r}
+mx <- mean(usedData$CigaretteConsumption)
+my <- mean(usedData$TestTotal)
+mx
+my
+```
+De gemidelde score lag iets hoger dan 9.5.
+
+### regressie
+
+```{r}
+#                                       afh                           onafh
+regr_Cigarette_GradeMath4IT <- lm(workData$TestTotal ~workData$CigaretteConsumption)
+regr_Cigarette_GradeMath4IT
+```
+Ook het intersect komt tot dat bedrag uit.
+
+### correlatie
+
+```{r}
+correlatieCoefficient <- cor(x = workData$CigaretteConsumption, y = workData$TestTotal)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+
+Zoals verwacht is het verband met de huidige waarden verwaarloosbaar. R onder 0.3 en R² onder 0.1
+
+Wat als we gewoon een onderscheid maken tussen Geen roker en roker.
+De onafhankelijke wordt dan een kwalitatieve waarde
+De afhankelijke blijft de waarden van de behaalde cijfers dus kwantitatief
+
+### visualisatie kwalitatief
+
+```{r}
+strategy_A <- workData$TestTotal[workData$CigaretteConsumptionClassificatie == 'geen roker']
+strategy_B <- workData$TestTotal[workData$CigaretteConsumptionClassificatie == 'roker']
+```
+
+```{r}
+sum (workData$CigaretteConsumptionClassificatie == 'geen roker')
+sum (workData$CigaretteConsumptionClassificatie == 'roker')
+```
+
+```{r}
+# Boxplot
+boxplot(workData$TestTotal ~ workData$CigaretteConsumptionClassificatie, horizontal = TRUE, xlab = "Test totaal", ylab = "Cigarette Consumption")
+
+# Clustered bar chart (histogram)
+frequencies <- table(workData$TestTotal, workData$CigaretteConsumptionClassificatie)
+barplot(t(frequencies), beside = TRUE, legend = TRUE, xlab = "Test Totaal", ylab = "Cigarette Comsumption")
+```
+
+visueel lijkt er een klein verschil in het voordeel van de resultaten van de niet rokers tegenover de rokers.
+
+```{r}
+t.test(strategy_A, strategy_B,alternative = 'greater', conf.level = 1 - 0.05)
+```
+De p waarde is groter dan 0.05 dus de nulhypothese kan niet verworpen worden. Er is geen verband.
+
+```{r}
+# Pooled standard deviation for two samples x and y
+pooled_sd <- function(x, y) {
+  sd_x <- sd(x, na.rm = TRUE)
+  sd_y <- sd(y, na.rm = TRUE)
+  n_x <- length(x)
+  n_y <- length(y)
+  
+  sqrt( ((n_x - 1) * sd_x^2 + (n_y - 1) * sd_y^2)
+        / (n_x + n_y - 2))
+}
+
+# Effect size, Cohen's d
+cohens_d <- function(x, y) {
+  (mean(y, na.rm = TRUE) - mean(x, na.rm = TRUE)) / pooled_sd(x, y)
+}
+```
+
+```{r}
+cohens_d(strategy_A, strategy_B)
+```
+Quod demostrandum. Geen effect gevonden en zeker niet boven de grens van 0.4

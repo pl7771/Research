@@ -1,0 +1,105 @@
+---
+title: "Fysieke gezondheid en wiskundige geletterdheid"
+subtitle:  "Uren sport en Score op de vragen op de wiskundetoets"
+author: "Schoeters Benjamin"
+date: "5/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Creer BMI classificatie tabel
+```{r}
+SportGroups <- data.frame(
+                Min = c(0, 2, 5),
+                Max = c(2, 5, 50),
+                Classificatie = c("<2", "2-5", ">5")
+                 )
+```
+
+Uitlezen data: maken een summary table voor tabellen TestQ, wegwerken van NA's
+```{r}
+data <- read_csv('../data/npe-1920-wiskundige-geletterdheid.csv')
+allTestData  <-  na.omit(subset(data, select = c(2,76,96:110))) %>%
+  mutate(TestLevel1 = TestQ01 + TestQ02 + TestQ03 + TestQ04 + TestQ05) %>%
+  mutate(TestLevel2 = TestQ06 + TestQ07 + TestQ08 + TestQ09 + TestQ10) %>%
+  mutate(TestLevel3 = TestQ11 + TestQ12 + TestQ13 + TestQ14 + TestQ15) %>%
+  mutate(TestTotal = TestLevel1 + TestLevel2 + TestLevel3)
+workData <- transform(allTestData, UrenSportGroup=SportGroups$Classificatie[findInterval(SportHours
+,SportGroups$Min)])
+glimpse(workData)
+```
+
+
+## Regressie-analyse `Avg van wiskundige testen` vs `SportHours`
+Is er een verband tussen de aantal uren sport gedurende de week (`SportHours`) en algemene wiskundige test (`TestTotal`)
+
+### Visualisatie van de dataset
+De onafhankelijke variabele (`UrenSportGroup`) wordt afgebeeld op de X-as, de afhankelijke (`Avg van wiskundige testen`) op de Y-as:
+
+```{r}
+par(mfrow=c(3,1))
+ggplot(workData, aes(x = factor(UrenSportGroup), y = TestLevel1)) + 
+  stat_summary(fun = "mean", geom = "bar")
+ggplot(workData, aes(x = factor(UrenSportGroup), y = TestLevel2)) + 
+  stat_summary(fun = "mean", geom = "bar")
+ggplot(workData, aes(x = factor(UrenSportGroup), y = TestLevel3)) + 
+  stat_summary(fun = "mean", geom = "bar")
+```
+
+```{r}
+ggplot(data = workData, mapping = aes(x = SportHours, y = TestTotal, col = Gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+
+### Regressie analyse
+
+```{r}
+#                                       afh                           onafh
+regr_SportHours_TestTotal <- lm(workData$TestTotal ~ workData$SportHours)
+regr_SportHours_TestTotal
+```
+
+### Correlatie en determinatie
+
+```{r}
+correlatieCoefficient <- cor(x = workData$SportHours, y = workData$TestTotal)
+determinatieCoefficient <- correlatieCoefficient^2
+correlatieCoefficient
+determinatieCoefficient
+```
+
+
+De correlatiecoëfficiënt is hier -0.02, wat betekend dat er geen verband is tussen de twee variabelen.
+
+
+## Mannelijk
+
+```{r}
+mannelijk <- workData[workData$Gender == "Mannelijk",]
+regr_mannelijk <- lm(mannelijk$TestTotal ~ mannelijk$SportHours)
+regr_mannelijk
+correlatieCoefficient_mannen <- cor(x = mannelijk$TestTotal, y = mannelijk$SportHours)
+determinatieCoefficient_mannen <- cor(x = mannelijk$TestTotal, y = mannelijk$SportHours)^2
+correlatieCoefficient_mannen 
+determinatieCoefficient_mannen
+```
+
+## Vrouwelijk
+
+```{r}
+vrouwelijk <- workData[workData$Gender == "Vrouwelijk",]
+regr_vrouwelijk <- lm(vrouwelijk$TestTotal ~ vrouwelijk$SportHours)
+regr_vrouwelijk
+correlatieCoefficient_vrouwen <- cor(x = vrouwelijk$TestTotal, y = vrouwelijk$SportHours)
+determinatieCoefficient_vrouwen <- cor(x = vrouwelijk$TestTotal, y = vrouwelijk$SportHours)^2
+correlatieCoefficient_vrouwen 
+determinatieCoefficient_vrouwen
+```
+De waarden komen hier net boven de 0.3 en 0.1 grens uit, echter betreft het maar een beperkt aantal punten !
+
